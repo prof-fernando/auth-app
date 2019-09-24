@@ -9,6 +9,19 @@ export class LoginService {
   constructor(private af: AngularFireAuth) {}
 
   public criarNovoUsuario(u: Usuario) {
-    this.af.auth.createUserWithEmailAndPassword(u.email, u.senha);
+    this.af.auth.createUserWithEmailAndPassword(u.email, u.senha).then(
+      credencias => {
+        console.log('Cadastro realizado');
+        credencias.user.updateProfile({
+          displayName: u.nome
+        });
+      },
+      erro => {
+        if (erro.code === 'auth/invalid-email') {
+          console.log('Email inválido');
+        }
+        console.log(erro);
+      }
+    );
   }
 }
