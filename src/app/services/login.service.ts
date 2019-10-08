@@ -3,29 +3,30 @@ import { AngularFireAuth } from '@angular/fire/auth';
 import { Usuario } from '../models/Usuario';
 import { AlertService } from './alert.service';
 import { Router } from '@angular/router';
-import { FirebaseApp } from '@angular/fire';
-import { first } from 'rxjs/operators';
-import { IfStmt } from '@angular/compiler';
+import { map } from 'rxjs/operators';
+import { Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
 })
 export class LoginService {
-  private usuarioLogado: firebase.User;
+  constructor(private af: AngularFireAuth, private al: AlertService, private route: Router) {}
 
-  constructor(private af: AngularFireAuth, private al: AlertService, private route: Router) {
-    this.af.authState.subscribe(user => {
-      this.usuarioLogado = user;
-    });
+  get usuarioLogado(): firebase.User {
+    return this.af.auth.currentUser;
   }
 
   public async login(email: string, senha: string) {
     const loading = await this.al.loading();
     this.af.auth.signInWithEmailAndPassword(email, senha).then(
       user => {
-        this.usuarioLogado = user.user;
         loading.dismiss();
-        this.route.navigate(['administracao']);
+        if (user.user.emailVerified) {
+          this.route.navigate(['administracao']);
+        } else {
+          this.al.toast({ message: 'Acesso negado verifique seu email ' });
+          this.logout();
+        }
       },
       error => {
         loading.dismiss();
@@ -35,7 +36,6 @@ export class LoginService {
   }
 
   public logout() {
-    this.usuarioLogado = null;
     this.af.auth.signOut();
     this.route.navigate(['login']);
   }
@@ -49,8 +49,12 @@ export class LoginService {
             displayName: u.nome
           })
           .then(() => {
+            // envia um email de confirmacao
+            this.af.auth.currentUser.sendEmailVerification({
+              url: 'http://localhost:8100'
+            });
             loading.dismiss();
-            this.al.alert('Cadastro efetivado com sucesso!', {
+            this.al.alert('Cadastro efetivado com sucesso! Verifique seu email', {
               buttons: [
                 {
                   text: 'continuar',
@@ -72,14 +76,13 @@ export class LoginService {
     );
   }
 
-  public async isLogado(): boolean {
-    this.usuarioLogado = await this.af.authState.pipe(first()).toPromise();
-    // currentUser armazena o usuário logado na aplicacao
-
-    if (this.usuarioLogado) {
-      return true;
-    } else {
-      return false;
-    }
+  public isLogado(): Observable<boolean> {
+    return this.af.authState.pipe(
+      map(usuario => {
+        // se usuario diferente de nulo
+        // existe sessão ativa, ou usuario logado
+        return usuario !== null;
+      })
+    );
   }
 }

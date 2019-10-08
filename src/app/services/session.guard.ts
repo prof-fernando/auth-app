@@ -8,6 +8,7 @@ import {
 } from '@angular/router';
 import { Observable } from 'rxjs';
 import { LoginService } from './login.service';
+import { tap } from 'rxjs/operators';
 
 @Injectable({
   providedIn: 'root'
@@ -15,16 +16,15 @@ import { LoginService } from './login.service';
 export class SessionGuard implements CanActivate {
   constructor(private login: LoginService, private route: Router) {}
 
-  canActivate(route: ActivatedRouteSnapshot, state: RouterStateSnapshot): boolean {
-    // se não tem alguem logado direcionado a
-    // tela de login
-    if (!this.login.isLogado()) {
-      // direciona
-      // this.route.navigate(['login']);
-      return true;
-    } else {
-      // permite o acesso
-      return true;
-    }
+  canActivate(route: ActivatedRouteSnapshot, state: RouterStateSnapshot): Observable<boolean> {
+   return this.login.isLogado().pipe(
+      tap(estaLogado => {
+        // se nao esta logado
+        // direciona para a tela de login
+        if (!estaLogado) {
+          this.route.navigate(['login']);
+        }
+      })
+    );
   }
 }
