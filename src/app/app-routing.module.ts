@@ -15,7 +15,8 @@ const routes: Routes = [
     path: 'administracao',
     loadChildren: './pages/private/administracao/administracao.module#AdministracaoPageModule',
     canActivate: [SessionGuard]
-  }
+  },
+  { path: 'carro', loadChildren: './pages/private/carro/carro.module#CarroPageModule' }
 ];
 
 @NgModule({
